@@ -1,35 +1,120 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["title", "scenes"],
+  "required": [
+    "title",
+    "scenes",
+    "beats"
+  ],
   "properties": {
-    "title": { "type": "string" },
-    "ltx_scene_ids": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "description": "Ids of 1-2 visually dynamic scenes to animate as LTX motion video; the rest are Ken Burns stills." },
+    "title": {
+      "type": "string"
+    },
+    "ltx_beat_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ids of the dynamic BEATS to animate as LTX motion — sparse (~one per 1-2 minutes); the rest are Ken Burns stills."
+    },
     "scenes": {
       "type": "array",
       "minItems": 3,
-      "maxItems": 6,
       "items": {
         "type": "object",
-        "required": ["id", "role", "narration", "visual_brief"],
+        "required": [
+          "id",
+          "role"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-          "role": { "type": "string", "enum": ["hook", "context", "causes", "events", "consequences", "why", "how", "tradeoffs", "applications", "revision"], "description": "The scene's function in the explainer arc (historical or conceptual)." },
-          "title": { "type": "string" },
-          "narration": { "type": "string", "minLength": 10, "description": "The voiceover for this scene — one or two crisp documentary sentences, sized to the scene's seconds (~2.6 words/sec)." },
-          "visual_brief": { "type": "string", "minLength": 15, "description": "What the cinematic still depicts (subject, setting, era, mood) — no on-screen text." },
-          "keywords": { "type": "array", "items": { "type": "string" }, "maxItems": 4, "description": "On-screen keyword pop-ups for this scene (1-4 short terms)." },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "role": {
+            "type": "string",
+            "description": "The scene's function/label in the arc (free-form: hook, why, how, types, risk, recap, etc.)."
+          },
+          "title": {
+            "type": "string"
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4
+          },
           "timeline": {
             "type": "object",
-            "properties": { "years": { "type": "array", "items": {} } },
-            "description": "Optional event timeline for this scene (e.g. the key-events scene): a list of year/markers, e.g. [1789, 1791, 1793]."
+            "properties": {
+              "years": {
+                "type": "array",
+                "items": {}
+              }
+            }
           },
           "card": {
             "type": "object",
-            "properties": { "title": { "type": "string" }, "bullets": { "type": "array", "items": { "type": "string" } } },
-            "description": "Optional revision card for this scene (e.g. the final revision scene): a title + bullet points."
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "bullets": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "beats": {
+      "type": "array",
+      "minItems": 3,
+      "description": "Ordered visual+VO units. Each beat is ONE short spoken phrase shown over ONE image; the narrator moving to the next beat is exactly when the image swaps.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "scene",
+          "vo",
+          "image_brief"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
           },
-          "duration": { "type": "number", "description": "Target seconds for this scene." }
+          "scene": {
+            "type": "string",
+            "description": "The id of the scene this beat belongs to."
+          },
+          "vo": {
+            "type": "string",
+            "minLength": 4,
+            "description": "The exact short narration phrase for this beat (~1 sentence, 2-7s)."
+          },
+          "image_brief": {
+            "type": "string",
+            "minLength": 10,
+            "description": "What the beat's image shows — match it tightly to what the vo MENTIONS (a specific studio/style/example named in the vo)."
+          },
+          "layout": {
+            "type": "string",
+            "enum": [
+              "full",
+              "split_v",
+              "split_diag"
+            ],
+            "description": "full = one image; split_v = two images in asymmetric vertical panels; split_diag = two images split by a diagonal slash."
+          },
+          "image_brief_b": {
+            "type": "string",
+            "description": "Second image brief, required when layout is split_v or split_diag."
+          }
         }
       }
     }

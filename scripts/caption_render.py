@@ -74,12 +74,17 @@ def transcribe_llm(video, translate_to):
     log(f"  words={len(words)}")
     return words
 
-def group_words(words, max_words=4, max_gap=0.7):
+def group_words(words, max_words=10, max_gap=0.7):
+    # Semantic chunking: keep a phrase/clause together (1-2 lines), breaking at
+    # clause punctuation, a long gap, or a word cap — not a fixed tiny count.
     groups, cur = [], []
+    def closes(tok): return bool(re.search(r'[.,;:!?…—]$', tok.strip()))
     for w in words:
         if cur and (len(cur) >= max_words or w["start"] - cur[-1]["end"] > max_gap):
             groups.append(cur); cur = []
         cur.append(w)
+        if len(cur) >= 3 and closes(w["w"]):   # end the chunk on clause punctuation
+            groups.append(cur); cur = []
     if cur: groups.append(cur)
     for gi, g in enumerate(groups):
         gs = g[0]["start"]
@@ -122,15 +127,29 @@ def render(video, out, words, font_path, font_frac=0.075, accent=(0,230,118),
             sizes = [font.getbbox(w["w"], stroke_width=stroke) for w in g]
             widths = [b[2]-b[0] for b in sizes]
             line_h = max(b[3]-b[1] for b in sizes)
-            x = (W - (sum(widths) + space*(len(g)-1))) // 2
-            y0 = int(H*pos_frac) - line_h//2
-            ov = Image.new("RGBA", (W, H), (0,0,0,0)); d = ImageDraw.Draw(ov)
+            line_gap = int(line_h * 0.30)
+            max_line_w = int(W * 0.84)
+            # wrap the semantic chunk into centered lines (1-2, occasionally 3)
+            lines, cur, curw = [], [], 0
             for w, ww in zip(g, widths):
-                active = w["start"] <= t < w["end"]
-                fill = accent+(255,) if active else (255,255,255,255)
-                d.text((x, y0), w["w"], font=font, fill=fill,
-                       stroke_width=stroke, stroke_fill=(0,0,0,255))
-                x += ww + space
+                add = ww + (space if cur else 0)
+                if cur and curw + add > max_line_w:
+                    lines.append(cur); cur, curw = [], 0; add = ww
+                cur.append((w, ww)); curw += add
+            if cur: lines.append(cur)
+            total_h = line_h*len(lines) + line_gap*(len(lines)-1)
+            y = int(H*pos_frac) - total_h//2
+            ov = Image.new("RGBA", (W, H), (0,0,0,0)); d = ImageDraw.Draw(ov)
+            for ln in lines:
+                lw = sum(ww for _, ww in ln) + space*(len(ln)-1)
+                x = (W - lw)//2
+                for w, ww in ln:
+                    active = w["start"] <= t < w["end"]
+                    fill = accent+(255,) if active else (255,255,255,255)
+                    d.text((x, y), w["w"], font=font, fill=fill,
+                           stroke_width=stroke, stroke_fill=(0,0,0,255))
+                    x += ww + space
+                y += line_h + line_gap
             base = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).convert("RGBA")
             base.alpha_composite(ov)
             frame = cv2.cvtColor(np.array(base.convert("RGB")), cv2.COLOR_RGB2BGR)

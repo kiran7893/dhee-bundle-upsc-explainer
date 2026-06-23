@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "license": "MIT",
   "displayName": "Dhee Demo Vision — 1-Minute UPSC Explainer",
-  "summary": "Turn a single TOPIC into a ~60s cinematic documentary explainer with ZERO manual prompting. An LLM distills the topic into a documentary arc of scenes (hook → causes → events → consequences → revision), each with narration, a cinematic visual, on-screen keywords, an event timeline and a revision card. Krea2 renders cinematic stills, a designed documentary narrator voice (OmniVoice-design → Higgs voice-clone) speaks each scene, ffmpeg Ken Burns sizes each clip to its narration, and the video.graphics runner burns timed keyword lower-thirds + the timeline + the revision card on top — programmatically. Built for exam/education explainers (UPSC etc.).",
+  "summary": "Turn a TOPIC — or a COMPLETE RESEARCHED PROJECT — into a cinematic documentary explainer with zero manual prompting. If given a full research document it distills the WHOLE project faithfully; if given a topic it researches and expands it. Either way: an arc of scenes, broken into narration-synced BEATS (each spoken phrase shown over its own matching image, so visuals swap exactly as the narrator names each thing), Krea2 cinematic stills, a dynamically-cast male/female narrator (OmniVoice design + Higgs voice-clone), mixed Ken-Burns + LTX motion, timed keyword/timeline/revision-card graphics + an opening title card, and optional karaoke captions.",
   "techLine": "TOPIC-ONLY · KREA2 STILLS · OMNIVOICE→HIGGS NARRATOR · KEN BURNS · TIMED GRAPHICS · KARAOKE CAPTIONS",
   "engineCompat": ">=0.1.0",
-  "description": "Topic in → 60-second cinematic documentary out. The pipeline: distill the topic into an outline, then a scene plan (a fixed documentary arc — hook, causes/context, key events, consequences, revision — each scene carrying narration, a cinematic visual brief, on-screen keywords, an optional event timeline, and an optional revision card). Each scene becomes a cinematic still via Krea2 (comfy.tti), narrated in ONE designed documentary voice (OmniVoice designs the narrator once; Higgs voice-clone speaks each scene), animated with a pixel-sharp ffmpeg Ken Burns move sized to its narration, concatenated, and finally the video.graphics runner composites timed keyword lower-thirds, the animated event timeline and the revision card ON TOP — all programmatic text (no image-model lettering). Audio-first, so clip length always matches the voiceover.",
+  "description": "Input → cinematic explainer video. The input is EITHER a short topic (researched + expanded) OR a complete researched project/report (distilled faithfully and covered comprehensively, scaled to the chosen duration). An LLM produces an outline, then a scene plan broken into fine-grained BEATS — each beat is one short narration phrase shown over one tightly-matched image, so the on-screen visual swaps exactly when the narrator names each thing (studio, figure, example, term). Each beat: a Krea2 cinematic still, a per-beat VO in ONE dynamically-cast narrator voice (OmniVoice design → Higgs voice-clone, male or female to fit the topic), a Ken-Burns move sized to the VO (audio-first), with a few dynamic beats animated by LTX. The video.graphics runner assembles the beats in order and overlays a title card, keyword lower-thirds, an animated timeline and a revision card (programmatic, no image-model text); optional cv.captions adds karaoke captions.",
   "dependencies": {
     "runners": {
       "llm.generate": ">=0.1.0",
@@ -29,8 +29,8 @@
       "kind": "file",
       "path": "inputs/topic.md",
       "required": false,
-      "label": "Topic",
-      "placeholder": "A single topic, e.g. 'French Revolution (1789)'. The pipeline writes everything else.",
+      "label": "Topic or researched project",
+      "placeholder": "EITHER a single topic (e.g. 'French Revolution (1789)') OR a complete researched document/report — the bundle distills a full project into the video. Set a longer Duration to cover more of the research.",
       "multiline": true
     },
     {
@@ -115,36 +115,32 @@
           "tier": "heavy",
           "outputFormat": "json",
           "temperature": 0.5,
-          "maxTokens": 12000
+          "maxTokens": 24000
         }
       },
       "displayCapability": "scene.plan"
     },
     {
-      "id": "scene_image_prompt",
-      "displayName": "Scene Visual Prompts",
+      "id": "beat_image_prompt",
+      "displayName": "Beat Image Prompts",
       "kind": "collection",
       "itemSource": "scene_plan",
-      "itemKey": "scenes",
+      "itemKey": "beats",
       "inputs": [
         {
           "from": "scene_plan",
           "usage": "input",
           "scope": "matching"
-        },
-        {
-          "from": "outline",
-          "usage": "context"
         }
       ],
       "outputs": {
         "format": "json",
-        "pattern": "prompts/scene_images/{{item_id}}.json"
+        "pattern": "prompts/beat_images/{{item_id}}.json"
       },
       "runner": {
         "tool": "llm.generate",
         "config": {
-          "promptTemplate": "prompts/scene_image_prompt.md",
+          "promptTemplate": "prompts/beat_image_prompt.md",
           "tier": "medium",
           "outputFormat": "json",
           "temperature": 0.5
@@ -154,20 +150,20 @@
       "headlineField": "imagePrompt"
     },
     {
-      "id": "scene_image",
-      "displayName": "Scene Visuals",
+      "id": "beat_image",
+      "displayName": "Beat Images",
       "kind": "collection",
-      "itemSource": "scene_image_prompt",
+      "itemSource": "beat_image_prompt",
       "inputs": [
         {
-          "from": "scene_image_prompt",
+          "from": "beat_image_prompt",
           "usage": "input",
           "scope": "matching"
         }
       ],
       "outputs": {
         "format": "image",
-        "pattern": "assets/images/scenes/{{item_id}}.png"
+        "pattern": "assets/images/beats/{{item_id}}.png"
       },
       "runner": {
         "tool": "comfy.tti",
@@ -182,11 +178,11 @@
       "displayCapability": "segment.image"
     },
     {
-      "id": "scene_narration",
-      "displayName": "Scene Narration",
+      "id": "beat_vo",
+      "displayName": "Beat Narration",
       "kind": "collection",
       "itemSource": "scene_plan",
-      "itemKey": "scenes",
+      "itemKey": "beats",
       "inputs": [
         {
           "from": "scene_plan",
@@ -196,24 +192,54 @@
       ],
       "outputs": {
         "format": "md",
-        "pattern": "plans/narration/{{item_id}}.md"
+        "pattern": "plans/beat_vo/{{item_id}}.md"
       },
       "runner": {
         "tool": "llm.generate",
         "config": {
-          "promptTemplate": "prompts/scene_narration.md",
-          "tier": "medium",
+          "promptTemplate": "prompts/beat_vo.md",
+          "tier": "light",
           "outputFormat": "markdown",
-          "temperature": 0.3
+          "temperature": 0.2
         }
       },
       "displayCapability": "segment.narration"
     },
     {
+      "id": "narrator_voice_spec",
+      "displayName": "Narrator Casting",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "scene_plan",
+          "usage": "context"
+        }
+      ],
+      "outputs": {
+        "format": "md",
+        "pattern": "plans/narrator_voice.md"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/narrator_voice.md",
+          "tier": "light",
+          "outputFormat": "markdown",
+          "temperature": 0.7
+        }
+      },
+      "displayCapability": "narrator.casting"
+    },
+    {
       "id": "narrator_voice",
       "displayName": "Narrator Voice",
       "kind": "stage",
-      "inputs": [],
+      "inputs": [
+        {
+          "from": "narrator_voice_spec",
+          "usage": "input"
+        }
+      ],
       "outputs": {
         "format": "audio",
         "pattern": "assets/audio/narrator_voice.wav"
@@ -224,11 +250,11 @@
           "workflowPath": "workflows/omnivoice_design.json",
           "endpoint": "self.local",
           "textNodeId": "30",
-          "textField": "text",
-          "text": "Across the centuries, a single moment can change the course of history, and understanding it is the first step to mastering it.",
+          "textField": "voice_instruct",
+          "textInput": "narrator_voice_spec",
           "fields": {
             "30": {
-              "voice_instruct": "male, middle-aged, moderate pitch, indian accent",
+              "text": "Across the centuries, a single moment can change the course of history, and understanding it is the first step to mastering it.",
               "speed": 1.0,
               "seed": 42,
               "guidance_scale": 3
@@ -239,15 +265,14 @@
       "displayCapability": "narrator.voice"
     },
     {
-      "id": "scene_audio",
-      "displayName": "Scene Narration Audio",
+      "id": "beat_audio",
+      "displayName": "Beat Audio",
       "kind": "collection",
-      "itemSource": "scene_narration",
+      "itemSource": "beat_vo",
       "inputs": [
         {
-          "from": "scene_narration",
-          "usage": "input",
-          "scope": "matching"
+          "from": "beat_vo",
+          "usage": "input"
         },
         {
           "from": "narrator_voice",
@@ -256,14 +281,14 @@
       ],
       "outputs": {
         "format": "audio",
-        "pattern": "assets/audio/scenes/{{item_id}}.wav"
+        "pattern": "assets/audio/beats/{{item_id}}.wav"
       },
       "runner": {
         "tool": "comfy.tts",
         "config": {
           "workflowPath": "workflows/higgs_clone.json",
           "endpoint": "self.local",
-          "textInput": "scene_narration",
+          "textInput": "beat_vo",
           "textNodeId": "2",
           "textField": "text",
           "voiceSample": "assets/audio/narrator_voice.wav",
@@ -274,7 +299,7 @@
               "reference_text": "Across the centuries, a single moment can change the course of history, and understanding it is the first step to mastering it.",
               "seed": 42,
               "longform_chunking": true,
-              "max_new_tokens": 4096,
+              "max_new_tokens": 2048,
               "temperature": 1.0
             }
           }
@@ -283,53 +308,53 @@
       "displayCapability": "segment.audio"
     },
     {
-      "id": "scene_clip",
-      "displayName": "Scene Clips",
+      "id": "beat_clip",
+      "displayName": "Beat Clips",
       "kind": "collection",
-      "itemSource": "scene_image",
+      "itemSource": "beat_image",
       "inputs": [
         {
-          "from": "scene_image",
+          "from": "beat_image",
           "usage": "input",
           "scope": "matching"
         },
         {
-          "from": "scene_audio",
+          "from": "beat_audio",
           "usage": "input",
           "scope": "matching"
         }
       ],
       "outputs": {
         "format": "video",
-        "pattern": "assets/videos/scenes/{{item_id}}.mp4"
+        "pattern": "assets/videos/beats/{{item_id}}.mp4"
       },
       "runner": {
         "tool": "ffmpeg.kenburns",
         "config": {
-          "imageInput": "scene_image",
-          "audioInput": "scene_audio",
+          "imageInput": "beat_image",
+          "audioInput": "beat_audio",
           "fps": 30,
           "width": 1280,
           "height": 720,
-          "zoom": 1.1
+          "zoom": 1.12
         }
       },
       "displayCapability": "segment.video"
     },
     {
       "id": "motion_clip",
-      "displayName": "Motion Clips (LTX)",
+      "displayName": "Motion Beats (LTX)",
       "kind": "collection",
       "itemSource": "scene_plan",
-      "itemKey": "ltx_scene_ids",
+      "itemKey": "ltx_beat_ids",
       "inputs": [
         {
-          "from": "scene_image",
+          "from": "beat_image",
           "usage": "input",
           "scope": "matching"
         },
         {
-          "from": "scene_audio",
+          "from": "beat_audio",
           "usage": "input",
           "scope": "matching"
         }
@@ -343,15 +368,15 @@
         "config": {
           "workflowPath": "workflows/ltx_director_local.json",
           "endpoint": "self.local",
-          "imageInput": "scene_image",
-          "audioInput": "scene_audio",
+          "imageInput": "beat_image",
+          "audioInput": "beat_audio",
           "lipSync": false,
           "loras": [],
           "width": 1280,
           "height": 720,
           "fps": 30,
-          "guideStrength": 0.5,
-          "globalPrompt": "Slow cinematic camera motion — a gentle push-in with subtle parallax and atmospheric drift (soft haze, light, drifting particles). The image stays in its established art style. No talking, no lip movement, no new text, no new characters."
+          "guideStrength": 0.3,
+          "globalPrompt": "A bold, clearly visible cinematic camera move with strong continuous motion — a decisive push-in or sweeping pan with pronounced parallax and drifting atmosphere. Keeps its art style. No talking, no text, no new characters."
         }
       },
       "displayCapability": "segment.motion"
@@ -371,7 +396,7 @@
           "scope": "all"
         },
         {
-          "from": "scene_clip",
+          "from": "beat_clip",
           "usage": "input",
           "scope": "all"
         }
@@ -386,7 +411,7 @@
           "planInput": "scene_plan",
           "clipInputs": [
             "motion_clip",
-            "scene_clip"
+            "beat_clip"
           ],
           "width": 1280,
           "height": 720,
@@ -422,8 +447,8 @@
           "translate_to": "",
           "font": "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
           "accent": "FFCC33",
-          "maxWords": 4,
-          "posFrac": 0.82
+          "maxWords": 10,
+          "posFrac": 0.8
         }
       },
       "displayCapability": "final.video"

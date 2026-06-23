@@ -1,22 +1,31 @@
-You are storyboarding a ~{{duration}}-second cinematic explainer for {{audience}} in this style: {{style}}. Turn the outline into an ordered SCENE PLAN.
+You are storyboarding a ~{{duration}}-second cinematic explainer for {{audience}} in this style: {{style}}. Turn the outline into a SCENE PLAN with fine-grained BEATS.
 
 Outline:
 {{outline}}
 
-Rules:
-- Produce 5 scenes. ALWAYS open with a "hook" scene and end with a "revision" (recap) scene. ADAPT the middle 3 to the topic:
-  - HISTORICAL topic → roles: "causes", "events", "consequences".
-  - CONCEPT / METHOD / TECH topic → roles: "why" (the problem/motivation), "how" (the mechanism/steps), "tradeoffs" (benefits & pitfalls, or applications).
-  Pick whichever fits the topic; set each scene's `role` accordingly.
-- The scene durations must sum to about {{duration}} seconds (e.g. for 60s: ~8 / 12 / 15 / 15 / 10). Set each scene's `duration`.
-- Each scene has:
-  - `narration`: the voiceover — crisp sentences sized to the scene's seconds (~2.6 spoken words/sec; an 8s scene ≈ 20 words). Accurate, concrete.
-  - `visual_brief`: what the cinematic still shows — for a historical topic, an evocative period scene; for a concept, a striking CONCEPTUAL / metaphorical visual (e.g. for "LLM as a judge": a glowing AI weighing two answers on scales of justice). NO on-screen text in the image.
-  - `keywords`: 1–4 SHORT on-screen terms a viewer should catch this scene.
-  - `timeline` (put on the ONE scene that has a sequence — the "events" scene for history, or the "how" scene for a process): { "years": [ ... ] }. The entries may be YEARS (1789, 1793) for history OR ordered STEP labels (e.g. "Input", "Criteria", "Score", "Verdict") for a process/method. Omit timeline entirely if the topic has no natural sequence.
-  - `card` (ONLY on the "revision" scene): { "title": "Remember", "bullets": [ 4–5 must-remember points ] }.
-- ids: lowercase_snake_case, unique (use the role as the id, e.g. "hook", "why", "how", "tradeoffs", "revision").
 
-Also output `ltx_scene_ids`: the ids of 1–2 of the MOST VISUALLY DYNAMIC scenes (a sweeping establishing shot, motion, drama, action) that should be ANIMATED as short video for variety — the rest stay as Ken Burns stills. Pick scenes whose visual genuinely benefits from motion.
+## Coverage
+Cover the outline's FULL substance across the scenes/beats — if the source is a long researched project, span ALL its major sections (use more scenes/beats), weighted by importance; do not drop sections or stop after the intro.
 
-Output JSON: { "title": "...", "scenes": [ { "id","role","title","narration","visual_brief","keywords":[...],"timeline":{...}?,"card":{...}?,"duration": N }, ... ], "ltx_scene_ids": [ "<id>", "<id>" ] }. Output ONLY the JSON.
+## Scenes (the arc + on-screen graphics)
+Produce AS MANY scenes as the content and the {{duration}} require — do NOT cap the number. Each scene is a CHAPTER covering one major section / sub-topic. As a rough guide, about one scene per ~30–90 seconds of video (≈4–6 scenes for 60s, ≈8–14 for 5 min, ≈25–45 for 20 min, and proportionally more for an hour) — but let the SOURCE's structure and the duration decide, never a fixed number. ALWAYS open with a "hook" scene and end with a "revision/recap" scene; adapt the middle to the topic (HISTORICAL → causes/events/consequences; CONCEPT/METHOD → why/how/tradeoffs/examples; a RESEARCHED PROJECT → one scene per major section). Each scene has:
+- `role`, optional `title`
+- `keywords`: 1–4 SHORT on-screen terms for the scene
+- `timeline` (on the ONE scene with a sequence): { "years": [ years OR ordered step labels ] }; omit if no sequence
+- `card` (ONLY the "revision" scene): { "title": "Remember", "bullets": [4–5 points] }
+
+## Beats (the synced visual + voice units — THIS IS THE KEY PART)
+Break the narration into a flat, ordered list of BEATS. Each beat is ONE short spoken phrase shown over ONE image. The image MUST match what the phrase MENTIONS — when the narrator names a specific thing (a studio, an art style, a place, an example, a person), that beat's image shows THAT thing. The image swaps exactly when the narration moves to the next beat, so the mention and the visual stay in sync ("zing").
+- Aim for ~2.6 spoken words/second; each beat `vo` is ~2–7 seconds (roughly 6–18 words). A {{duration}}s video has roughly {{duration}}/4 to {{duration}}/3 beats — produce THAT many, however large (a 20-minute video has hundreds of beats; do not cap or summarise to fewer).
+- Each beat: `id` (unique snake_case), `scene` (the id of the scene it belongs to — beats are grouped under scenes in order), `vo` (the exact phrase), `image_brief` (tightly matched to the vo).
+- Cover every scene with beats, in reading order. The concatenation of all beats' `vo` IS the full narration.
+
+## Variety
+- `ltx_beat_ids`: the most dynamic beats to animate as motion video — keep SPARSE, roughly ONE per 1–2 minutes of video (LTX is slow/expensive); the rest are Ken Burns stills.
+- ASYMMETRY: for a few beats where comparing/contrasting two things helps, set `layout` to "split_v" (two asymmetric vertical panels) or "split_diag" (diagonal slash) and provide BOTH `image_brief` and `image_brief_b` (the two visuals). Use sparingly for punch. Default layout "full".
+
+Output JSON:
+{ "title":"...", "ltx_beat_ids":["..."],
+  "scenes":[ {"id","role","title","keywords":[...],"timeline":{...}?,"card":{...}?}, ... ],
+  "beats":[ {"id","scene","vo","image_brief","layout"?,"image_brief_b"?}, ... ] }
+Output ONLY the JSON.
