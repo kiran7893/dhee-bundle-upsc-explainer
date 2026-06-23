@@ -15,7 +15,8 @@
       "ffmpeg.kenburns": ">=0.1.0",
       "ffmpeg.concat": ">=0.1.0",
       "video.graphics": ">=0.1.0",
-      "cv.captions": ">=0.1.0"
+      "cv.captions": ">=0.1.0",
+      "comfy.ltx_director": ">=0.1.0"
     },
     "runnerPackages": {
       "comfy.tts": "dhee-runner-tts",
@@ -316,27 +317,44 @@
       "displayCapability": "segment.video"
     },
     {
-      "id": "base_video",
-      "displayName": "Assembled Cut",
-      "kind": "stage",
+      "id": "motion_clip",
+      "displayName": "Motion Clips (LTX)",
+      "kind": "collection",
+      "itemSource": "scene_plan",
+      "itemKey": "ltx_scene_ids",
       "inputs": [
         {
-          "from": "scene_clip",
+          "from": "scene_image",
           "usage": "input",
-          "scope": "all"
+          "scope": "matching"
+        },
+        {
+          "from": "scene_audio",
+          "usage": "input",
+          "scope": "matching"
         }
       ],
       "outputs": {
         "format": "video",
-        "pattern": "assets/videos/base/base_video.mp4"
+        "pattern": "assets/videos/motion/{{item_id}}.mp4"
       },
       "runner": {
-        "tool": "ffmpeg.concat",
+        "tool": "comfy.ltx_director",
         "config": {
-          "transition": "none"
+          "workflowPath": "workflows/ltx_director_local.json",
+          "endpoint": "self.local",
+          "imageInput": "scene_image",
+          "audioInput": "scene_audio",
+          "lipSync": false,
+          "loras": [],
+          "width": 1280,
+          "height": 720,
+          "fps": 30,
+          "guideStrength": 0.5,
+          "globalPrompt": "Slow cinematic camera motion — a gentle push-in with subtle parallax and atmospheric drift (soft haze, light, drifting particles). The image stays in its established art style. No talking, no lip movement, no new text, no new characters."
         }
       },
-      "displayCapability": "base.video"
+      "displayCapability": "segment.motion"
     },
     {
       "id": "graphics_video",
@@ -344,12 +362,13 @@
       "kind": "stage",
       "inputs": [
         {
-          "from": "base_video",
+          "from": "scene_plan",
           "usage": "input"
         },
         {
-          "from": "scene_plan",
-          "usage": "input"
+          "from": "motion_clip",
+          "usage": "input",
+          "scope": "all"
         },
         {
           "from": "scene_clip",
@@ -364,12 +383,16 @@
       "runner": {
         "tool": "video.graphics",
         "config": {
-          "baseInput": "base_video",
           "planInput": "scene_plan",
-          "scenesInput": "scene_clip",
+          "clipInputs": [
+            "motion_clip",
+            "scene_clip"
+          ],
           "width": 1280,
           "height": 720,
-          "accent": "#ffcc33"
+          "fps": 30,
+          "accent": "#ffcc33",
+          "titleSeconds": 3.5
         }
       },
       "displayCapability": "graphics.video"

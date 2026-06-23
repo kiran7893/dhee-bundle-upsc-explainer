@@ -17,4 +17,6 @@ Rules:
   - `card` (ONLY on the "revision" scene): { "title": "Remember", "bullets": [ 4–5 must-remember points ] }.
 - ids: lowercase_snake_case, unique (use the role as the id, e.g. "hook", "why", "how", "tradeoffs", "revision").
 
-Output JSON: { "title": "...", "scenes": [ { "id","role","title","narration","visual_brief","keywords":[...],"timeline":{...}?,"card":{...}?,"duration": N }, ... ] }. Output ONLY the JSON.
+Also output `ltx_scene_ids`: the ids of 1–2 of the MOST VISUALLY DYNAMIC scenes (a sweeping establishing shot, motion, drama, action) that should be ANIMATED as short video for variety — the rest stay as Ken Burns stills. Pick scenes whose visual genuinely benefits from motion.
+
+Output JSON: { "title": "...", "scenes": [ { "id","role","title","narration","visual_brief","keywords":[...],"timeline":{...}?,"card":{...}?,"duration": N }, ... ], "ltx_scene_ids": [ "<id>", "<id>" ] }. Output ONLY the JSON.

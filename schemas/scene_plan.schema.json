@@ -4,6 +4,7 @@
   "required": ["title", "scenes"],
   "properties": {
     "title": { "type": "string" },
+    "ltx_scene_ids": { "type": "array", "items": { "type": "string" }, "maxItems": 2, "description": "Ids of 1-2 visually dynamic scenes to animate as LTX motion video; the rest are Ken Burns stills." },
     "scenes": {
       "type": "array",
       "minItems": 3,
