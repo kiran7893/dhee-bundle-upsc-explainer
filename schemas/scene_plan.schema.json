@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["title", "scenes"],
+  "properties": {
+    "title": { "type": "string" },
+    "scenes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "narration", "visual_brief"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "role": { "type": "string", "enum": ["hook", "context", "causes", "events", "consequences", "why", "how", "tradeoffs", "applications", "revision"], "description": "The scene's function in the explainer arc (historical or conceptual)." },
+          "title": { "type": "string" },
+          "narration": { "type": "string", "minLength": 10, "description": "The voiceover for this scene — one or two crisp documentary sentences, sized to the scene's seconds (~2.6 words/sec)." },
+          "visual_brief": { "type": "string", "minLength": 15, "description": "What the cinematic still depicts (subject, setting, era, mood) — no on-screen text." },
+          "keywords": { "type": "array", "items": { "type": "string" }, "maxItems": 4, "description": "On-screen keyword pop-ups for this scene (1-4 short terms)." },
+          "timeline": {
+            "type": "object",
+            "properties": { "years": { "type": "array", "items": {} } },
+            "description": "Optional event timeline for this scene (e.g. the key-events scene): a list of year/markers, e.g. [1789, 1791, 1793]."
+          },
+          "card": {
+            "type": "object",
+            "properties": { "title": { "type": "string" }, "bullets": { "type": "array", "items": { "type": "string" } } },
+            "description": "Optional revision card for this scene (e.g. the final revision scene): a title + bullet points."
+          },
+          "duration": { "type": "number", "description": "Target seconds for this scene." }
+        }
+      }
+    }
+  }
+}

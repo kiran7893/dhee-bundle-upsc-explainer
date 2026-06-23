@@ -1,0 +1,424 @@
+{
+  "id": "upsc_explainer",
+  "version": "0.1.0",
+  "license": "MIT",
+  "displayName": "Dhee Demo Vision — 1-Minute UPSC Explainer",
+  "summary": "Turn a single TOPIC into a ~60s cinematic documentary explainer with ZERO manual prompting. An LLM distills the topic into a documentary arc of scenes (hook → causes → events → consequences → revision), each with narration, a cinematic visual, on-screen keywords, an event timeline and a revision card. Krea2 renders cinematic stills, a designed documentary narrator voice (OmniVoice-design → Higgs voice-clone) speaks each scene, ffmpeg Ken Burns sizes each clip to its narration, and the video.graphics runner burns timed keyword lower-thirds + the timeline + the revision card on top — programmatically. Built for exam/education explainers (UPSC etc.).",
+  "techLine": "TOPIC-ONLY · KREA2 STILLS · OMNIVOICE→HIGGS NARRATOR · KEN BURNS · TIMED GRAPHICS · KARAOKE CAPTIONS",
+  "engineCompat": ">=0.1.0",
+  "description": "Topic in → 60-second cinematic documentary out. The pipeline: distill the topic into an outline, then a scene plan (a fixed documentary arc — hook, causes/context, key events, consequences, revision — each scene carrying narration, a cinematic visual brief, on-screen keywords, an optional event timeline, and an optional revision card). Each scene becomes a cinematic still via Krea2 (comfy.tti), narrated in ONE designed documentary voice (OmniVoice designs the narrator once; Higgs voice-clone speaks each scene), animated with a pixel-sharp ffmpeg Ken Burns move sized to its narration, concatenated, and finally the video.graphics runner composites timed keyword lower-thirds, the animated event timeline and the revision card ON TOP — all programmatic text (no image-model lettering). Audio-first, so clip length always matches the voiceover.",
+  "dependencies": {
+    "runners": {
+      "llm.generate": ">=0.1.0",
+      "comfy.tti": ">=0.1.0",
+      "comfy.tts": ">=0.1.0",
+      "ffmpeg.kenburns": ">=0.1.0",
+      "ffmpeg.concat": ">=0.1.0",
+      "video.graphics": ">=0.1.0",
+      "cv.captions": ">=0.1.0"
+    },
+    "runnerPackages": {
+      "comfy.tts": "dhee-runner-tts",
+      "video.graphics": "dhee-runner-video-graphics"
+    }
+  },
+  "inputs": [
+    {
+      "id": "topic_input",
+      "kind": "file",
+      "path": "inputs/topic.md",
+      "required": false,
+      "label": "Topic",
+      "placeholder": "A single topic, e.g. 'French Revolution (1789)'. The pipeline writes everything else.",
+      "multiline": true
+    },
+    {
+      "id": "duration",
+      "kind": "project",
+      "field": "duration",
+      "default": 60,
+      "label": "Duration (seconds)",
+      "control": "text"
+    },
+    {
+      "id": "style",
+      "kind": "project",
+      "field": "style",
+      "default": "Historical Documentary — cinematic, archival, dramatic lighting",
+      "label": "Style",
+      "control": "text"
+    },
+    {
+      "id": "audience",
+      "kind": "project",
+      "field": "audience",
+      "default": "UPSC aspirants",
+      "label": "Audience",
+      "control": "text"
+    },
+    {
+      "id": "aspect",
+      "kind": "project",
+      "field": "aspect",
+      "default": "16:9",
+      "label": "Aspect",
+      "control": "text"
+    }
+  ],
+  "goal": "final_video",
+  "nodes": [
+    {
+      "id": "outline",
+      "displayName": "Outline",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "topic_input",
+          "usage": "context"
+        }
+      ],
+      "outputs": {
+        "format": "md",
+        "pattern": "plans/outline.md"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/outline.md",
+          "tier": "heavy",
+          "outputFormat": "markdown",
+          "temperature": 0.5
+        }
+      },
+      "displayCapability": "outline.prose"
+    },
+    {
+      "id": "scene_plan",
+      "displayName": "Scene Plan",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "outline",
+          "usage": "context"
+        }
+      ],
+      "outputs": {
+        "format": "json",
+        "pattern": "plans/scene_plan.json"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/scene_plan.md",
+          "outputSchema": "schemas/scene_plan.schema.json",
+          "tier": "heavy",
+          "outputFormat": "json",
+          "temperature": 0.5,
+          "maxTokens": 12000
+        }
+      },
+      "displayCapability": "scene.plan"
+    },
+    {
+      "id": "scene_image_prompt",
+      "displayName": "Scene Visual Prompts",
+      "kind": "collection",
+      "itemSource": "scene_plan",
+      "itemKey": "scenes",
+      "inputs": [
+        {
+          "from": "scene_plan",
+          "usage": "input",
+          "scope": "matching"
+        },
+        {
+          "from": "outline",
+          "usage": "context"
+        }
+      ],
+      "outputs": {
+        "format": "json",
+        "pattern": "prompts/scene_images/{{item_id}}.json"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/scene_image_prompt.md",
+          "tier": "medium",
+          "outputFormat": "json",
+          "temperature": 0.5
+        }
+      },
+      "displayCapability": "segment.image_prompt",
+      "headlineField": "imagePrompt"
+    },
+    {
+      "id": "scene_image",
+      "displayName": "Scene Visuals",
+      "kind": "collection",
+      "itemSource": "scene_image_prompt",
+      "inputs": [
+        {
+          "from": "scene_image_prompt",
+          "usage": "input",
+          "scope": "matching"
+        }
+      ],
+      "outputs": {
+        "format": "image",
+        "pattern": "assets/images/scenes/{{item_id}}.png"
+      },
+      "runner": {
+        "tool": "comfy.tti",
+        "config": {
+          "workflowPath": "workflows/krea2_tti.json",
+          "manifestPath": "workflows/krea2_tti.manifest.json",
+          "endpoint": "self.local",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "displayCapability": "segment.image"
+    },
+    {
+      "id": "scene_narration",
+      "displayName": "Scene Narration",
+      "kind": "collection",
+      "itemSource": "scene_plan",
+      "itemKey": "scenes",
+      "inputs": [
+        {
+          "from": "scene_plan",
+          "usage": "input",
+          "scope": "matching"
+        }
+      ],
+      "outputs": {
+        "format": "md",
+        "pattern": "plans/narration/{{item_id}}.md"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/scene_narration.md",
+          "tier": "medium",
+          "outputFormat": "markdown",
+          "temperature": 0.3
+        }
+      },
+      "displayCapability": "segment.narration"
+    },
+    {
+      "id": "narrator_voice",
+      "displayName": "Narrator Voice",
+      "kind": "stage",
+      "inputs": [],
+      "outputs": {
+        "format": "audio",
+        "pattern": "assets/audio/narrator_voice.wav"
+      },
+      "runner": {
+        "tool": "comfy.tts",
+        "config": {
+          "workflowPath": "workflows/omnivoice_design.json",
+          "endpoint": "self.local",
+          "textNodeId": "30",
+          "textField": "text",
+          "text": "Across the centuries, a single moment can change the course of history, and understanding it is the first step to mastering it.",
+          "fields": {
+            "30": {
+              "voice_instruct": "male, middle-aged, moderate pitch, indian accent",
+              "speed": 1.0,
+              "seed": 42,
+              "guidance_scale": 3
+            }
+          }
+        }
+      },
+      "displayCapability": "narrator.voice"
+    },
+    {
+      "id": "scene_audio",
+      "displayName": "Scene Narration Audio",
+      "kind": "collection",
+      "itemSource": "scene_narration",
+      "inputs": [
+        {
+          "from": "scene_narration",
+          "usage": "input",
+          "scope": "matching"
+        },
+        {
+          "from": "narrator_voice",
+          "usage": "context"
+        }
+      ],
+      "outputs": {
+        "format": "audio",
+        "pattern": "assets/audio/scenes/{{item_id}}.wav"
+      },
+      "runner": {
+        "tool": "comfy.tts",
+        "config": {
+          "workflowPath": "workflows/higgs_clone.json",
+          "endpoint": "self.local",
+          "textInput": "scene_narration",
+          "textNodeId": "2",
+          "textField": "text",
+          "voiceSample": "assets/audio/narrator_voice.wav",
+          "voiceNodeId": "13",
+          "voiceField": "audio",
+          "fields": {
+            "2": {
+              "reference_text": "Across the centuries, a single moment can change the course of history, and understanding it is the first step to mastering it.",
+              "seed": 42,
+              "longform_chunking": true,
+              "max_new_tokens": 4096,
+              "temperature": 1.0
+            }
+          }
+        }
+      },
+      "displayCapability": "segment.audio"
+    },
+    {
+      "id": "scene_clip",
+      "displayName": "Scene Clips",
+      "kind": "collection",
+      "itemSource": "scene_image",
+      "inputs": [
+        {
+          "from": "scene_image",
+          "usage": "input",
+          "scope": "matching"
+        },
+        {
+          "from": "scene_audio",
+          "usage": "input",
+          "scope": "matching"
+        }
+      ],
+      "outputs": {
+        "format": "video",
+        "pattern": "assets/videos/scenes/{{item_id}}.mp4"
+      },
+      "runner": {
+        "tool": "ffmpeg.kenburns",
+        "config": {
+          "imageInput": "scene_image",
+          "audioInput": "scene_audio",
+          "fps": 30,
+          "width": 1280,
+          "height": 720,
+          "zoom": 1.1
+        }
+      },
+      "displayCapability": "segment.video"
+    },
+    {
+      "id": "base_video",
+      "displayName": "Assembled Cut",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "scene_clip",
+          "usage": "input",
+          "scope": "all"
+        }
+      ],
+      "outputs": {
+        "format": "video",
+        "pattern": "assets/videos/base/base_video.mp4"
+      },
+      "runner": {
+        "tool": "ffmpeg.concat",
+        "config": {
+          "transition": "none"
+        }
+      },
+      "displayCapability": "base.video"
+    },
+    {
+      "id": "graphics_video",
+      "displayName": "Graphics Overlay",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "base_video",
+          "usage": "input"
+        },
+        {
+          "from": "scene_plan",
+          "usage": "input"
+        },
+        {
+          "from": "scene_clip",
+          "usage": "input",
+          "scope": "all"
+        }
+      ],
+      "outputs": {
+        "format": "video",
+        "pattern": "assets/videos/graphics/graphics_video.mp4"
+      },
+      "runner": {
+        "tool": "video.graphics",
+        "config": {
+          "baseInput": "base_video",
+          "planInput": "scene_plan",
+          "scenesInput": "scene_clip",
+          "width": 1280,
+          "height": 720,
+          "accent": "#ffcc33"
+        }
+      },
+      "displayCapability": "graphics.video"
+    },
+    {
+      "id": "final_video",
+      "displayName": "Final (captioned)",
+      "kind": "stage",
+      "inputs": [
+        {
+          "from": "graphics_video",
+          "usage": "input"
+        }
+      ],
+      "outputs": {
+        "format": "video",
+        "pattern": "assets/videos/final/final_video.mp4"
+      },
+      "runner": {
+        "tool": "cv.captions",
+        "config": {
+          "scriptPath": "scripts/caption_render.py",
+          "videoInput": "graphics_video",
+          "asrEngine": "whisper",
+          "model": "small",
+          "language": "en",
+          "translate_to": "",
+          "font": "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+          "accent": "FFCC33",
+          "maxWords": 4,
+          "posFrac": 0.82
+        }
+      },
+      "displayCapability": "final.video"
+    }
+  ],
+  "display": {
+    "thumbnail": {
+      "from": [
+        "segment.image"
+      ],
+      "pick": "first_completed"
+    },
+    "stats": [
+      {
+        "label": "scenes",
+        "source": "scene.plan",
+        "path": "scenes.length"
+      }
+    ]
+  }
+}
