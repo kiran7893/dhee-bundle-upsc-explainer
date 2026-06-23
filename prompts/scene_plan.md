@@ -22,10 +22,11 @@ Break the narration into a flat, ordered list of BEATS. Each beat is ONE short s
 
 ## Variety
 - `ltx_beat_ids`: the most dynamic beats to animate as motion video — keep SPARSE, roughly ONE per 1–2 minutes of video (LTX is slow/expensive); the rest are Ken Burns stills.
-- ASYMMETRY: for a few beats where comparing/contrasting two things helps, set `layout` to "split_v" (two asymmetric vertical panels) or "split_diag" (diagonal slash) and provide BOTH `image_brief` and `image_brief_b` (the two visuals). Use sparingly for punch. Default layout "full".
+- ASYMMETRY: for a few beats where comparing/contrasting two things helps, set `layout` to "split_v" (two asymmetric vertical panels) or "split_diag" (diagonal slash) and provide BOTH `image_brief` and `image_brief_b` (the two visuals). Use sparingly for punch (a couple per video). Default layout "full". ALSO list every split beat's id in `split_beat_ids`.
 
 Output JSON:
 { "title":"...", "ltx_beat_ids":["..."],
   "scenes":[ {"id","role","title","keywords":[...],"timeline":{...}?,"card":{...}?}, ... ],
+  "split_beat_ids":["<ids of beats whose layout is split_v/split_diag>"],
   "beats":[ {"id","scene","vo","image_brief","layout"?,"image_brief_b"?}, ... ] }
 Output ONLY the JSON.

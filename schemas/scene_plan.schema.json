@@ -117,6 +117,13 @@
           }
         }
       }
+    },
+    "split_beat_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ids of beats with layout split_v/split_diag (need a second image)."
     }
   }
 }

@@ -178,6 +178,63 @@
       "displayCapability": "segment.image"
     },
     {
+      "id": "beat_image_b_prompt",
+      "displayName": "Split Image-B Prompts",
+      "kind": "collection",
+      "itemSource": "scene_plan",
+      "itemKey": "split_beat_ids",
+      "inputs": [
+        {
+          "from": "scene_plan",
+          "usage": "input",
+          "scope": "matching"
+        }
+      ],
+      "outputs": {
+        "format": "json",
+        "pattern": "prompts/beat_images_b/{{item_id}}.json"
+      },
+      "runner": {
+        "tool": "llm.generate",
+        "config": {
+          "promptTemplate": "prompts/beat_image_b.md",
+          "tier": "medium",
+          "outputFormat": "json",
+          "temperature": 0.5
+        }
+      },
+      "displayCapability": "segment.image_prompt",
+      "headlineField": "imagePrompt"
+    },
+    {
+      "id": "beat_image_b",
+      "displayName": "Split Images B",
+      "kind": "collection",
+      "itemSource": "beat_image_b_prompt",
+      "inputs": [
+        {
+          "from": "beat_image_b_prompt",
+          "usage": "input",
+          "scope": "matching"
+        }
+      ],
+      "outputs": {
+        "format": "image",
+        "pattern": "assets/images/beats_b/{{item_id}}.png"
+      },
+      "runner": {
+        "tool": "comfy.tti",
+        "config": {
+          "workflowPath": "workflows/krea2_tti.json",
+          "manifestPath": "workflows/krea2_tti.manifest.json",
+          "endpoint": "self.local",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "displayCapability": "segment.image"
+    },
+    {
       "id": "beat_vo",
       "displayName": "Beat Narration",
       "kind": "collection",
@@ -399,6 +456,11 @@
           "from": "beat_clip",
           "usage": "input",
           "scope": "all"
+        },
+        {
+          "from": "beat_image_b",
+          "usage": "input",
+          "scope": "all"
         }
       ],
       "outputs": {
@@ -417,7 +479,8 @@
           "height": 720,
           "fps": 30,
           "accent": "#ffcc33",
-          "titleSeconds": 3.5
+          "titleSeconds": 3.5,
+          "bImagesInput": "beat_image_b"
         }
       },
       "displayCapability": "graphics.video"
