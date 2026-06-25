@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate flat bundle + JSON
+        run: |
+          node -e '
+          const fs = require("fs");
+          const path = require("path");
+          const b = JSON.parse(fs.readFileSync("bundle.json", "utf8"));
+          for (const k of ["id", "goal", "nodes", "displayName", "summary"]) {
+            if (!(k in b)) throw new Error(`bundle.json missing "${k}"`);
+          }
+          const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => {
+            const p = path.join(d, e.name);
+            return e.isDirectory() ? walk(p) : p.endsWith(".json") ? [p] : [];
+          });
+          for (const f of walk(".")) {
+            if (f === "./package.json") continue;
+            JSON.parse(fs.readFileSync(f, "utf8"));
+          }
+          console.log(`✓ flat bundle "${b.id}" valid`);
+          '

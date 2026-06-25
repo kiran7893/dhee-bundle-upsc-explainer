@@ -1,0 +1,25 @@
+{
+  "name": "@dhee_ai/bundle-upsc-explainer",
+  "version": "0.1.1",
+  "description": "Turn a topic or researched project into a cinematic UPSC-style documentary explainer.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["dhee-bundle"],
+  "homepage": "https://github.com/dheeai/dhee-bundle-upsc-explainer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dheeai/dhee-bundle-upsc-explainer.git"
+  },
+  "dhee": { "bundles": "." },
+  "files": [
+    "bundle.json",
+    "inputs",
+    "prompts",
+    "schemas",
+    "scripts",
+    "workflows",
+    "LICENSE"
+  ],
+  "engines": { "node": ">=20.0.0" },
+  "publishConfig": { "access": "public" }
+}

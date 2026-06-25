@@ -19,8 +19,9 @@
       "comfy.ltx_director": ">=0.1.0"
     },
     "runnerPackages": {
-      "comfy.tts": "dhee-runner-tts",
-      "video.graphics": "dhee-runner-video-graphics"
+      "comfy.tts": "@dhee_ai/runner-tts",
+      "video.graphics": "@dhee_ai/runner-video-graphics",
+      "cv.captions": "@dhee_ai/runner-captions"
     }
   },
   "inputs": [
