@@ -1,0 +1,17 @@
+{
+  "name": "@dhee_ai/bundle-upsc-explainer",
+  "version": "0.1.0",
+  "description": "Turn a topic or researched project into a cinematic UPSC-style documentary explainer with Krea2 stills, OmniVoice→Higgs narration, Ken Burns + LTX motion, timed graphics, and optional karaoke captions.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["dhee-bundle"],
+  "homepage": "https://github.com/dheeai/dhee-bundle-upsc-explainer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dheeai/dhee-bundle-upsc-explainer.git"
+  },
+  "dhee": { "bundles": "./bundles" },
+  "files": ["bundles", "LICENSE", "README.md"],
+  "engines": { "node": ">=20.0.0" },
+  "publishConfig": { "access": "public" }
+}

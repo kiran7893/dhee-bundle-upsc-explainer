@@ -20,7 +20,8 @@
     },
     "runnerPackages": {
       "comfy.tts": "dhee-runner-tts",
-      "video.graphics": "dhee-runner-video-graphics"
+      "video.graphics": "dhee-runner-video-graphics",
+      "cv.captions": "dhee-runner-captions"
     }
   },
   "inputs": [
